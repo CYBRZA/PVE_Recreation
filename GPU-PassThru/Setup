@@ -1,0 +1,28 @@
+# Edit the file
+sudo nano /etc/kernel/cmdline
+# Change line to below
+root=ZFS=rpool/ROOT/pve-1 boot=zfs iommu=pt
+
+# pass through block, paste into the terminal as a full block
+sudo tee /etc/modules > /dev/null <<'EOF'
+vfio
+vfio_iommu_type1
+vfio_pci
+EOF
+
+# pass through block 2, paste into the terminal as a full block
+sudo tee /etc/modprobe.d/vfio.conf > /dev/null <<'EOF'
+options vfio-pci ids=1002:150e,1002:1640
+softdep amdgpu pre: vfio-pci
+softdep radeon pre: vfio-pci
+softdep snd_hda_intel pre: vfio-pci
+EOF
+
+# Update the change and then reboot it
+sudo update-initramfs -u -k all
+sudo proxmox-boot-tool refresh
+sudo reboot
+
+# Add the GPU to whichever VM
+sudo qm set 402 --hostpci0 0000:c6:00.0,pcie=1
+sudo qm set 402 --hostpci1 0000:c6:00.1,pcie=1
